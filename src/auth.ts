@@ -20,18 +20,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ok = await bcrypt.compare(password, u.passwordHash);
         if (!ok) return null;
         const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || undefined;
-        return { id: String(u.id), email: u.email, name, role: u.role } as any;
+        return {
+          id: String(u.id),
+          email: u.email,
+          name,
+          role: u.role,
+          mustChangePw: u.mustChangePw,
+        } as any;
       },
     }),
   ],
   callbacks: {
     jwt({ token, user }) {
-      if (user) token.role = (user as any).role;
+      if (user) {
+        token.role = (user as any).role;
+        token.mustChangePw = (user as any).mustChangePw;
+      }
       return token;
     },
     session({ session, token }) {
       (session.user as any).role = token.role;
       (session.user as any).id = token.sub;
+      (session.user as any).mustChangePw = token.mustChangePw;
       return session;
     },
   },

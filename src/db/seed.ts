@@ -77,13 +77,56 @@ async function main() {
   const baseLabels: [string, string, string][] = [
     ["nav.home", "Home", "Start"],
     ["nav.dashboard", "Dashboard", "Übersicht"],
+
+    // Generisch
+    ["common.loading", "Please wait…", "Bitte warten…"],
+
+    // Login
+    ["login.title", "Sign in", "Anmelden"],
+    ["login.email", "Email", "E-Mail"],
+    ["login.password", "Password", "Passwort"],
+    ["login.submit", "Sign in", "Anmelden"],
+    ["login.error.invalid", "Invalid email or password.", "E-Mail oder Passwort ist falsch."],
+    ["login.changed.success", "Your password has been changed. Please sign in.", "Dein Passwort wurde geändert. Bitte melde dich an."],
+
+    // Passwortwechsel
+    ["changepw.title", "Change password", "Passwort ändern"],
+    ["changepw.hint", "For security reasons you need to set a new password.", "Aus Sicherheitsgründen musst du ein neues Passwort festlegen."],
+    ["changepw.current", "Current password", "Aktuelles Passwort"],
+    ["changepw.new", "New password", "Neues Passwort"],
+    ["changepw.confirm", "Confirm new password", "Neues Passwort bestätigen"],
+    ["changepw.submit", "Save new password", "Neues Passwort speichern"],
+    ["changepw.error.session", "Your session has expired. Please sign in again.", "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."],
+    ["changepw.error.tooShort", "The new password must be at least 8 characters long.", "Das neue Passwort muss mindestens 8 Zeichen lang sein."],
+    ["changepw.error.mismatch", "The new passwords do not match.", "Die neuen Passwörter stimmen nicht überein."],
+    ["changepw.error.wrongCurrent", "The current password is incorrect.", "Das aktuelle Passwort ist falsch."],
+    ["changepw.error.same", "The new password must differ from the current one.", "Das neue Passwort muss sich vom aktuellen unterscheiden."],
+
+    // Suche
+    ["search.title", "Find new business partners", "Neue Geschäftspartner finden"],
+    ["search.intro", "Describe your company and your request — we actively search for matching partners.", "Beschreibe dein Unternehmen und dein Anliegen — wir suchen aktiv nach passenden Partnern."],
+    ["search.field.mode", "What would you like to do?", "Was möchtest du tun?"],
     ["search.mode.seller", "I am selling — find new markets", "Ich verkaufe — neue Absatzmärkte finden"],
     ["search.mode.buyer", "I am buying — find new suppliers", "Ich kaufe ein — neue Lieferanten finden"],
     ["search.field.company", "Company name", "Unternehmensname"],
     ["search.field.url", "Website URL", "Website-URL"],
+    ["search.field.url.optional", "Website URL (optional)", "Website-URL (optional)"],
     ["search.field.product", "Product / product group", "Produkt / Produktgruppe"],
     ["search.field.region", "Target country / region", "Zielland / Zielregion"],
     ["search.submit", "Find partners", "Partner finden"],
+    ["search.error.session", "Your session has expired. Please sign in again.", "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."],
+    ["search.error.mode", "Please choose whether you are selling or buying.", "Bitte wähle, ob du verkaufst oder einkaufst."],
+    ["search.error.required", "Please fill in all required fields.", "Bitte fülle alle Pflichtfelder aus."],
+    ["search.status", "Status", "Status"],
+    ["search.status.queued", "Queued — the search pipeline will start shortly.", "In Warteschlange — die Such-Pipeline startet in Kürze."],
+    ["search.status.running", "Running…", "Läuft…"],
+    ["search.status.completed", "Completed", "Abgeschlossen"],
+    ["search.status.failed", "Failed", "Fehlgeschlagen"],
+    ["search.status.cancelled", "Cancelled", "Abgebrochen"],
+    ["search.detail.pipelineNote", "Results will appear here once the search pipeline has run.", "Die Ergebnisse erscheinen hier, sobald die Such-Pipeline durchgelaufen ist."],
+    ["search.list.title", "My searches", "Meine Suchen"],
+    ["search.list.empty", "No searches yet.", "Noch keine Suchen."],
+    ["search.list.new", "New search", "Neue Suche"],
   ];
 
   for (const [key] of baseLabels) {

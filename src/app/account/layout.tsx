@@ -3,6 +3,7 @@ import Link from "next/link";
 /** Kundenbackend (Zusatzanweisung 2): Status, Vertrag, Zahlungen, Suchen. */
 const NAV = [
   ["/account", "Übersicht"],
+  ["/account/search", "Neue Suche"],
   ["/account/searches", "Meine Suchen"],
   ["/account/favorites", "Favoriten"],
   ["/account/contract", "Vertrag & Upgrade"],

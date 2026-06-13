@@ -7,8 +7,10 @@ import bcrypt from "bcryptjs";
 import { db } from "./index";
 import {
   languages, plans, prompts, promptVersions, integrations, labels,
-  labelTranslations, users, settings,
+  labelTranslations, users, settings, llmProviders,
 } from "./schema";
+import { eq } from "drizzle-orm";
+import { encryptSecret } from "../lib/crypto";
 
 async function main() {
   // --- Sprachen ---
@@ -127,6 +129,21 @@ async function main() {
     ["search.list.title", "My searches", "Meine Suchen"],
     ["search.list.empty", "No searches yet.", "Noch keine Suchen."],
     ["search.list.new", "New search", "Neue Suche"],
+
+    // Pipeline-Runner & Ergebnisse
+    ["search.run.starting", "We are searching for partners — this can take a moment.", "Wir suchen nach Partnern — das kann einen Moment dauern."],
+    ["search.run.failed", "The search could not be completed.", "Die Suche konnte nicht abgeschlossen werden."],
+    ["search.run.retry", "Try again", "Erneut versuchen"],
+    ["search.run.refresh", "Refresh", "Aktualisieren"],
+    ["search.error.insufficientCredits", "Not enough credits for this search.", "Nicht genügend Credits für diese Suche."],
+    ["search.error.noSearchAdapter", "No active search source is configured. Please contact the administrator.", "Es ist keine aktive Suchquelle konfiguriert. Bitte wende dich an die Administration."],
+    ["results.title", "Results", "Ergebnisse"],
+    ["results.empty", "No matching partners found.", "Keine passenden Partner gefunden."],
+    ["results.score", "Match", "Treffer"],
+    ["results.contact", "Contact", "Kontakt"],
+    ["results.contact.none", "No contact found.", "Kein Kontakt gefunden."],
+    ["results.contact.locked", "Contact data is included in the paid plans.", "Kontaktdaten sind in den kostenpflichtigen Tarifen enthalten."],
+    ["results.source", "Source", "Quelle"],
   ];
 
   for (const [key] of baseLabels) {
@@ -167,6 +184,34 @@ async function main() {
     customerId: null,
     createdByUserId: null,
   }).onConflictDoNothing();
+
+  // --- Optionales Bootstrap externer Zugaenge (verschluesselt) ---
+  // Solange das Admin-CRUD fuer Provider/Integrationen fehlt, koennen Keys einmalig
+  // ueber ENV beim Seeden gesetzt werden. Sie landen verschluesselt in der DB
+  // (AES-256-GCM); zur Laufzeit bleibt nur DATABASE_URL/APP_ENCRYPTION_KEY in ENV.
+  if (process.env.SEED_ANTHROPIC_KEY) {
+    const existing = await db.select().from(llmProviders).where(eq(llmProviders.vendor, "anthropic")).limit(1);
+    if (existing.length === 0) {
+      await db.insert(llmProviders).values({
+        name: "Anthropic Claude",
+        vendor: "anthropic",
+        baseUrl: null,
+        model: process.env.SEED_LLM_MODEL ?? "claude-sonnet-4-6",
+        apiKeyEncrypted: encryptSecret(process.env.SEED_ANTHROPIC_KEY),
+        isDefault: true,
+        active: true,
+        config: { max_tokens: 2048, temperature: 0.2 },
+      });
+      console.log("LLM-Provider Anthropic angelegt (Key verschluesselt).");
+    }
+  }
+  if (process.env.SEED_SERPER_KEY) {
+    await db
+      .update(integrations)
+      .set({ credentialsEncrypted: encryptSecret(JSON.stringify({ apiKey: process.env.SEED_SERPER_KEY })), active: true })
+      .where(eq(integrations.key, "serper"));
+    console.log("Serper-Integration aktiviert (Key verschluesselt).");
+  }
 
   console.log("Seed abgeschlossen. Admin: admin@anna-lyst.local / " +
     (process.env.SEED_ADMIN_PASSWORD ? "(SEED_ADMIN_PASSWORD)" : "change-me-now — bitte sofort aendern."));

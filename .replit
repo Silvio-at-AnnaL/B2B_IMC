@@ -36,3 +36,7 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
+[deployment]
+deploymentTarget = "autoscale"
+build = ["pnpm", "run", "build"]
+run = ["pnpm", "run", "start"]

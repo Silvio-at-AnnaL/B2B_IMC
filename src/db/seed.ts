@@ -1,0 +1,132 @@
+/**
+ * Seed-Daten fuer die DEV-Umgebung.
+ * Ausfuehren: pnpm run db:seed  (DATABASE_URL muss gesetzt sein)
+ */
+import "dotenv/config";
+import bcrypt from "bcryptjs";
+import { db } from "./index";
+import {
+  languages, plans, prompts, promptVersions, integrations, labels,
+  labelTranslations, users, settings,
+} from "./schema";
+
+async function main() {
+  // --- Sprachen ---
+  await db.insert(languages).values({ code: "en", name: "English", active: true }).onConflictDoNothing();
+  await db.insert(languages).values({ code: "de", name: "Deutsch", active: true }).onConflictDoNothing();
+
+  // --- Plaene ---
+  await db.insert(plans).values({ code: "free", name: "Free", monthlyCredits: 3, resultsPerSearch: 5, includesContactData: false, priceCents: 0, currency: "EUR", active: true }).onConflictDoNothing();
+  await db.insert(plans).values({ code: "starter", name: "Starter", monthlyCredits: 20, resultsPerSearch: 20, includesContactData: true, priceCents: 4900, currency: "EUR", active: true }).onConflictDoNothing();
+  await db.insert(plans).values({ code: "pro", name: "Pro", monthlyCredits: 100, resultsPerSearch: 50, includesContactData: true, priceCents: 14900, currency: "EUR", active: true }).onConflictDoNothing();
+  await db.insert(plans).values({ code: "enterprise", name: "Enterprise", monthlyCredits: null, resultsPerSearch: 100, includesContactData: true, priceCents: null, currency: "EUR", active: true }).onConflictDoNothing();
+
+  // --- Prompt-Chain (3 Schritte, versioniert) ---
+  await db.insert(prompts).values({ key: "context_extraction", name: "Schritt 1 — Unternehmenskontext extrahieren", description: null }).onConflictDoNothing();
+  await db.insert(prompts).values({ key: "search_strategy", name: "Schritt 2 — Suchstrategie ableiten", description: null }).onConflictDoNothing();
+  await db.insert(prompts).values({ key: "scoring", name: "Schritt 3 — Partnerrecherche & Scoring", description: null }).onConflictDoNothing();
+
+  await db.insert(promptVersions).values({
+    promptKey: "context_extraction", version: 1, active: true,
+    systemText:
+      "Du bist ein B2B-Marktanalyst. Analysiere die Website eines Unternehmens und extrahiere: " +
+      "Branche (NACE-Code wenn moeglich), Hauptprodukte/Dienstleistungen, Zertifizierungen (ISO, IATF, ...), " +
+      "Positionierung (Nische, Massenmarkt, Premium), Hinweise auf bestehende Maerkte. " +
+      "Antworte ausschliesslich als JSON-Objekt.",
+    userTemplate: "Website-Inhalt:\n{{scraped_text}}",
+    modelParams: null,
+    createdByUserId: null,
+  }).onConflictDoNothing();
+
+  await db.insert(promptVersions).values({
+    promptKey: "search_strategy", version: 1, active: true,
+    systemText:
+      "Du bist ein B2B-Vertriebsstratege. Leite aus Unternehmensprofil, Modus, Produkt und Zielregion ab: " +
+      "relevante Suchbegriffe (Deutsch + Englisch + Landessprache), Zielunternehmensprofil (Branche, Groesse, Typ), " +
+      "relevante Berufsbezeichnungen der Ansprechpartner, empfohlene Quellen (Branchenverbaende, Messen, Register). " +
+      "Antworte ausschliesslich als JSON-Objekt.",
+    userTemplate:
+      "Unternehmensprofil: {{company_profile_json}}\nModus: {{mode}}\nProdukt: {{product}}\nZielregion: {{target_region}}",
+    modelParams: null,
+    createdByUserId: null,
+  }).onConflictDoNothing();
+
+  await db.insert(promptVersions).values({
+    promptKey: "scoring", version: 1, active: true,
+    systemText:
+      "Du wertest Suchergebnisse aus und bewertest potenzielle Geschaeftspartner. " +
+      "Kriterien: Produktrelevanz, Laendermatch, Unternehmensgroesse, Kontaktverfuegbarkeit. " +
+      "Skala 0-100 mit Begruendung in 1-2 Saetzen in der Sprache {{output_lang}}. " +
+      "Antworte ausschliesslich als JSON-Array.",
+    userTemplate: "Kandidaten:\n{{candidates_json}}",
+    modelParams: null,
+    createdByUserId: null,
+  }).onConflictDoNothing();
+
+  // --- Integrations-Platzhalter ---
+  await db.insert(integrations).values({ key: "serper", name: "Serper (Google Search API)", kind: "search_api", baseUrl: "https://google.serper.dev", credentialsEncrypted: null, config: null, cascadePriority: 100, active: false }).onConflictDoNothing();
+  await db.insert(integrations).values({ key: "diribo", name: "diribo", kind: "directory", baseUrl: "https://api.diribo.com/v1/de", credentialsEncrypted: null, config: null, cascadePriority: 10, active: false }).onConflictDoNothing();
+  await db.insert(integrations).values({ key: "industrystock", name: "IndustryStock", kind: "directory", baseUrl: null, credentialsEncrypted: null, config: null, cascadePriority: 11, active: false }).onConflictDoNothing();
+  await db.insert(integrations).values({ key: "wlw", name: "Wer liefert was (Visable)", kind: "directory", baseUrl: null, credentialsEncrypted: null, config: null, cascadePriority: 12, active: false }).onConflictDoNothing();
+  await db.insert(integrations).values({ key: "website_scraping", name: "Eigenes Website-Scraping (Impressum/Team/Kontakt)", kind: "scraper", baseUrl: null, credentialsEncrypted: null, config: null, cascadePriority: 20, active: true }).onConflictDoNothing();
+  await db.insert(integrations).values({ key: "unipile", name: "Unipile (LinkedIn)", kind: "contact_data", baseUrl: "https://api.unipile.com", credentialsEncrypted: null, config: null, cascadePriority: 30, active: false }).onConflictDoNothing();
+  await db.insert(integrations).values({ key: "hunter", name: "Hunter.io (E-Mail-Finder/Verifizierung, optional)", kind: "contact_data", baseUrl: "https://api.hunter.io", credentialsEncrypted: null, config: null, cascadePriority: 40, active: false }).onConflictDoNothing();
+  await db.insert(integrations).values({ key: "smtp", name: "Mailserver (SMTP)", kind: "mail", baseUrl: null, credentialsEncrypted: null, config: null, cascadePriority: 100, active: false }).onConflictDoNothing();
+
+  // --- Basis-Labels ---
+  const baseLabels: [string, string, string][] = [
+    ["nav.home", "Home", "Start"],
+    ["nav.dashboard", "Dashboard", "Übersicht"],
+    ["search.mode.seller", "I am selling — find new markets", "Ich verkaufe — neue Absatzmärkte finden"],
+    ["search.mode.buyer", "I am buying — find new suppliers", "Ich kaufe ein — neue Lieferanten finden"],
+    ["search.field.company", "Company name", "Unternehmensname"],
+    ["search.field.url", "Website URL", "Website-URL"],
+    ["search.field.product", "Product / product group", "Produkt / Produktgruppe"],
+    ["search.field.region", "Target country / region", "Zielland / Zielregion"],
+    ["search.submit", "Find partners", "Partner finden"],
+  ];
+
+  for (const [key] of baseLabels) {
+    await db.insert(labels).values({ key, context: null }).onConflictDoNothing();
+  }
+  for (const [key, en, de] of baseLabels) {
+    await db.insert(labelTranslations).values({ labelKey: key, langCode: "en", value: en }).onConflictDoNothing();
+    await db.insert(labelTranslations).values({ labelKey: key, langCode: "de", value: de }).onConflictDoNothing();
+  }
+
+  // --- Settings ---
+  await db.insert(settings).values({ key: "robots_txt", value: "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /account/", isEncrypted: false, updatedByUserId: null }).onConflictDoNothing();
+  await db.insert(settings).values({ key: "llms_txt", value: "# B2B_IMC — ANNA-lyst\n\nAI-powered B2B industrial matchmaking platform.", isEncrypted: false, updatedByUserId: null }).onConflictDoNothing();
+  await db.insert(settings).values({ key: "theme", value: { primary: "#1D71B8", accent: "#EB9234", green: "#428A44", red: "#D94235", gray: "#878787", colorblindMode: false }, isEncrypted: false, updatedByUserId: null }).onConflictDoNothing();
+  await db.insert(settings).values({ key: "branding", value: { logoUrl: "/logo.png", footerText: "ANNA Lyst GmbH", footerUrl: "" }, isEncrypted: false, updatedByUserId: null }).onConflictDoNothing();
+  await db.insert(settings).values({
+    key: "permissions_json",
+    value: {
+      admin: ["*"],
+      staff: ["customers:*", "searches:read", "labels:*", "seo:*", "invoices:read"],
+      customer: ["account:*"],
+    },
+    isEncrypted: false,
+    updatedByUserId: null,
+  }).onConflictDoNothing();
+
+  // --- Initialer Admin ---
+  const initialPassword = process.env.SEED_ADMIN_PASSWORD ?? "change-me-now";
+  await db.insert(users).values({
+    email: "admin@anna-lyst.local",
+    passwordHash: await bcrypt.hash(initialPassword, 12),
+    firstName: "Initial",
+    lastName: "Admin",
+    role: "admin",
+    status: "active",
+    mustChangePw: true,
+    locale: "de",
+    customerId: null,
+    createdByUserId: null,
+  }).onConflictDoNothing();
+
+  console.log("Seed abgeschlossen. Admin: admin@anna-lyst.local / " +
+    (process.env.SEED_ADMIN_PASSWORD ? "(SEED_ADMIN_PASSWORD)" : "change-me-now — bitte sofort aendern."));
+}
+
+main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });
